@@ -83,6 +83,7 @@ Will accept just a dynamic UDP port that was allocated from a previous forwardin
 Prepares `ztserver` for shutdown, disconnecting from the ZeroTier network. After getting a successful response from this REST API, you should send `SIGTERM` or the Windows equivalent to the `ztserver` process in order to stop it.
 
 You will need to relaunch `ztserver` to connect to a network again after calling this method, as `PUT /join` will not work a second time.
+
 **Request:**
 
 ```json
