@@ -60,10 +60,10 @@ endif()
 message(STATUS "Extracting libzt Windows build...")
 file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/libzt)
 if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
-  execute_process(COMMAND ${CMAKE_COMMAND} -E tar xfz "${CMAKE_CURRENT_SOURCE_DIR}/win32-46.zip"
+  execute_process(COMMAND ${CMAKE_COMMAND} -E tar xfz "${CMAKE_CURRENT_SOURCE_DIR}/win32-${LIBZT_BUILD_VERSION}.zip"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 else()
-  execute_process(COMMAND ${CMAKE_COMMAND} -E tar xfz "${CMAKE_CURRENT_SOURCE_DIR}/win64-46.zip"
+  execute_process(COMMAND ${CMAKE_COMMAND} -E tar xfz "${CMAKE_CURRENT_SOURCE_DIR}/win64-${LIBZT_BUILD_VERSION}.zip"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
 
@@ -71,10 +71,21 @@ message(STATUS "Including libzt headers and libraries...")
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/libzt/include)
 if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
   link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libzt/bin_win32/lib/Debug)
+	set (WIN_LIB_HINT_PATH "C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.16299.0\\um\\x86")
+	find_library(ws2_32_LIBRARY_PATH NAMES WS2_32 HINTS ${WIN_LIB_HINT_PATH})
+	find_library(lshlwapi_LIBRARY_PATH NAMES ShLwApi HINTS ${WIN_LIB_HINT_PATH})
+	set (liphlpapi_LIBRARY_PATH "C:/Program Files (x86)/Windows Kits/10/Lib/10.0.16299.0/um/x86/iphlpapi.Lib")
 else()
   link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libzt/bin_win64/lib/Debug)
+	set (WIN_LIB_HINT_PATH "C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.16299.0\\um\\x64")
+	find_library(ws2_32_LIBRARY_PATH NAMES WS2_32 HINTS ${WIN_LIB_HINT_PATH})
+	find_library(lshlwapi_LIBRARY_PATH NAMES ShLwApi HINTS ${WIN_LIB_HINT_PATH})
+	set (liphlpapi_LIBRARY_PATH "C:/Program Files (x86)/Windows Kits/10/Lib/10.0.16299.0/um/x64/iphlpapi.Lib")
 endif()
-link_libraries(zt lwip zto)
+link_libraries(zt lwip zto http)
+link_libraries(ws2_32)
+link_libraries(${lshlwapi_LIBRARY_PATH})
+link_libraries(${liphlpapi_LIBRARY_PATH})
 
 message(STATUS "Including ulfius header files...")
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/ulfius/lib/orcania/src)
@@ -94,7 +105,7 @@ link_libraries(${PTHREAD_LIBRARY})
 
 message(STATUS "Patching poll.h include out of ulfius...")
 file(READ ulfius/src/ulfius.h ulfiusheader)
-string(REPLACE "#include <poll.h>\n" "" ulfiusheader "${ulfiusheader}")
+string(REPLACE "#include <poll.h>\n" "#include <win32-size-hook.h>\n" ulfiusheader "${ulfiusheader}")
 file(WRITE ulfius/src/ulfius.h "${ulfiusheader}")
 
 message(STATUS "Including syslog shim for Windows...")
@@ -109,7 +120,7 @@ add_definitions(
 message(STATUS "Defining ztserver...")
 add_definitions(-DU_DISABLE_CURL -DU_DISABLE_WEBSOCKET)
 add_executable(ztserver 
-  main.c
+  main.cpp
   ulfius/lib/orcania/src/base64.c
   ulfius/lib/orcania/src/memory.c
   ulfius/lib/orcania/src/orcania.c

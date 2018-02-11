@@ -1,3 +1,4 @@
 .vs/
 libzt/
-win64-45.zip
+/win32-*.zip
+/win64-*.zip
