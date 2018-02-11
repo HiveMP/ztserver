@@ -1,0 +1,6 @@
+[submodule "vcpkg"]
+	path = vcpkg
+	url = https://github.com/Microsoft/vcpkg
+[submodule "ulfius"]
+	path = ulfius
+	url = https://github.com/babelouest/ulfius
