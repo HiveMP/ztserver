@@ -241,14 +241,14 @@ void forward_from_zerotier(
 		{
 			FD_ZERO(&readset);
 			FD_SET(socket_fd, &readset);
-			//struct timeval timeout;
-			//timeout.tv_sec = 1;
-			//timeout.tv_usec = 0;
-			result = zts_select(socket_fd + 1, &readset, NULL, NULL, NULL /* &timeout */);
-			/*if (!forwarded_port->running)
+			struct timeval timeout;
+			timeout.tv_sec = 1;
+			timeout.tv_usec = 0;
+			result = zts_select(socket_fd + 1, &readset, NULL, NULL, &timeout);
+			if (!forwarded_port->running)
 			{
 				break;
-			}*/
+			}
 		} while (result == -1 && (errno == EINTR || errno == ETIME));
 		if (!forwarded_port->running)
 		{
