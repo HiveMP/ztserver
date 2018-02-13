@@ -218,3 +218,35 @@ foreach(IPV4_ON ON OFF)
     endforeach()
   endforeach()
 endforeach()
+
+add_executable(ztbasicrecv 
+  zt_basic_recv.cpp
+  ulfius/lib/orcania/src/base64.c
+  ulfius/lib/orcania/src/memory.c
+  ulfius/lib/orcania/src/orcania.c
+  ulfius/lib/yder/src/yder.c
+  ulfius/src/u_map.c
+  ulfius/src/u_request.c
+  ulfius/src/u_response.c
+  ulfius/src/u_send_request.c
+  ulfius/src/u_websocket.c
+  ulfius/src/ulfius.c
+  win32-shim/syslog.c
+  win32-shim/string.c)
+target_link_libraries(ztbasicrecv PRIVATE jansson)
+
+add_executable(ztbasicrecvtcp 
+  zt_basic_recv_tcp.cpp
+  ulfius/lib/orcania/src/base64.c
+  ulfius/lib/orcania/src/memory.c
+  ulfius/lib/orcania/src/orcania.c
+  ulfius/lib/yder/src/yder.c
+  ulfius/src/u_map.c
+  ulfius/src/u_request.c
+  ulfius/src/u_response.c
+  ulfius/src/u_send_request.c
+  ulfius/src/u_websocket.c
+  ulfius/src/ulfius.c
+  win32-shim/syslog.c
+  win32-shim/string.c)
+target_link_libraries(ztbasicrecvtcp PRIVATE jansson)

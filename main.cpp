@@ -40,8 +40,7 @@ struct forwarded_port {
 	int ztsocket4;
 	int ztsocket6;
 	bool running;
-	std::thread* thread_zt4inbound;
-	std::thread* thread_zt6inbound;
+	std::thread* thread_ztinbound;
 	std::thread* thread_localinbound;
 };
 
@@ -229,27 +228,22 @@ void forward_packet_zt(
 
 void forward_from_zerotier(
 	struct forwarded_port* forwarded_port,
-	const struct sockaddr_in* localservice,
-	int socket_fd)
+	const struct sockaddr_in* localservice)
 {
 	while (forwarded_port->running)
 	{
 		int result;
 		fd_set readset;
 
-		do
-		{
-			FD_ZERO(&readset);
-			FD_SET(socket_fd, &readset);
-			struct timeval timeout;
-			timeout.tv_sec = 1;
-			timeout.tv_usec = 0;
-			result = zts_select(socket_fd + 1, &readset, NULL, NULL, &timeout);
-			if (!forwarded_port->running)
-			{
-				break;
-			}
-		} while (result == -1 && (errno == EINTR || errno == ETIME));
+		FD_ZERO(&readset);
+		FD_SET(forwarded_port->ztsocket4, &readset);
+		FD_SET(forwarded_port->ztsocket6, &readset);
+		result = zts_select(
+			forwarded_port->ztsocket6 + 1,
+			&readset,
+			NULL,
+			NULL,
+			NULL);
 		if (!forwarded_port->running)
 		{
 			break;
@@ -257,12 +251,37 @@ void forward_from_zerotier(
 
 		if (result > 0)
 		{
-			if (FD_ISSET(socket_fd, &readset))
+			if (FD_ISSET(&readset, forwarded_port->ztsocket4))
 			{
 				char buffer[2048];
 				struct sockaddr_storage src_addr;
 				socklen_t src_addr_len = sizeof(src_addr);
-				ssize_t count = zts_recvfrom(socket_fd, buffer, sizeof(buffer), 0, (struct sockaddr*)&src_addr, &src_addr_len);
+				ssize_t count = zts_recvfrom(forwarded_port->ztsocket4, buffer, sizeof(buffer), 0, (struct sockaddr*)&src_addr, &src_addr_len);
+				if (count == -1)
+				{
+					// ignore packet
+				}
+				else if (count == sizeof(buffer))
+				{
+					// ignore packet
+				}
+				else
+				{
+					forward_packet(
+						forwarded_port,
+						localservice,
+						&src_addr,
+						buffer,
+						count);
+				}
+			}
+
+			if (FD_ISSET(&readset, forwarded_port->ztsocket6))
+			{
+				char buffer[2048];
+				struct sockaddr_storage src_addr;
+				socklen_t src_addr_len = sizeof(src_addr);
+				ssize_t count = zts_recvfrom(forwarded_port->ztsocket6, buffer, sizeof(buffer), 0, (struct sockaddr*)&src_addr, &src_addr_len);
 				if (count == -1)
 				{
 					forwarded_port->running = false;
@@ -282,10 +301,6 @@ void forward_from_zerotier(
 						count);
 				}
 			}
-		}
-		else if (result < 0)
-		{
-			/* An error ocurred, just print it to stdout */
 		}
 	}
 }
@@ -410,8 +425,7 @@ int callback_forward_udp(const struct _u_request * request, struct _u_response *
 	forwarded_port->localport = 0;
 	forwarded_port->remoteport = 0;
 	forwarded_port->running = true;
-	forwarded_port->thread_zt4inbound = nullptr;
-	forwarded_port->thread_zt6inbound = nullptr;
+	forwarded_port->thread_ztinbound = nullptr;
 	forwarded_port->thread_localinbound = nullptr;
 	forwarded_port->socket = socket(AF_INET, SOCK_DGRAM, 0);
 	forwarded_port->ztsocket4 = -1;
@@ -456,15 +470,30 @@ int callback_forward_udp(const struct _u_request * request, struct _u_response *
 		delete forwarded_port;
 		RETURN_FAILURE("unable to create ZT UDP6 socket");
 	}
-	sockaddr_in servicezt4;
-	servicezt4.sin_family = AF_INET;
-	servicezt4.sin_addr.s_addr = INADDR_ANY;
-	if (real_proxyport > 0 && real_proxyport < 65536) {
-		servicezt4.sin_port = real_proxyport;
+	struct sockaddr_storage servicezt4_stor;
+	struct sockaddr_in* servicezt4 = (struct sockaddr_in*)&servicezt4_stor;
+	servicezt4->sin_family = AF_INET;
+	servicezt4->sin_addr.s_addr = INADDR_ANY;
+	servicezt4->sin_port = 0;
+	if (zts_get_address(zt_network, &servicezt4_stor, AF_INET) == -1)
+	{
+		zts_close(forwarded_port->ztsocket4);
+		zts_close(forwarded_port->ztsocket6);
+		closesocket(forwarded_port->socket);
+		delete forwarded_port;
+		RETURN_FAILURE("unable to get the ZeroTier IPv4 interface");
 	}
-	zts_bind(forwarded_port->ztsocket4, (SOCKADDR*)&servicezt4, sizeof(sockaddr_in));
+	servicezt4->sin_port = 0;
+	if (zts_bind(forwarded_port->ztsocket4, (SOCKADDR*)servicezt4, sizeof(sockaddr_in)) != 0)
+	{
+		zts_close(forwarded_port->ztsocket4);
+		zts_close(forwarded_port->ztsocket6);
+		closesocket(forwarded_port->socket);
+		delete forwarded_port;
+		RETURN_FAILURE("unable to bind to ZeroTier IPv4 address");
+	}
 	int assigned_zt_addr_len = sizeof(servicezt4);
-	if (getsockname(forwarded_port->socket, (SOCKADDR*)&servicezt4, &assigned_zt_addr_len) == SOCKET_ERROR)
+	if (zts_getsockname(forwarded_port->ztsocket4, (SOCKADDR*)servicezt4, &assigned_zt_addr_len) == SOCKET_ERROR)
 	{
 		zts_close(forwarded_port->ztsocket4);
 		zts_close(forwarded_port->ztsocket6);
@@ -475,26 +504,31 @@ int callback_forward_udp(const struct _u_request * request, struct _u_response *
 	sockaddr_in6 servicezt6;
 	servicezt6.sin6_family = AF_INET6;
 	servicezt6.sin6_addr = IN6ADDR_ANY_INIT;
-	servicezt6.sin6_port = servicezt4.sin_port;
-	zts_bind(forwarded_port->ztsocket6, (SOCKADDR*)&servicezt6, sizeof(sockaddr_in6));
+	servicezt6.sin6_port = 0;
+	if (zts_bind(forwarded_port->ztsocket6, (SOCKADDR*)&servicezt6, sizeof(sockaddr_in6)) != 0)
+	{
+		zts_close(forwarded_port->ztsocket4);
+		zts_close(forwarded_port->ztsocket6);
+		closesocket(forwarded_port->socket);
+		delete forwarded_port;
+		RETURN_FAILURE("unable to bind to ZeroTier IPv6 address");
+	}
+	int assigned_zt_addr6_len = sizeof(servicezt6);
+	if (zts_getsockname(forwarded_port->ztsocket6, (SOCKADDR*)&servicezt6, &assigned_zt_addr6_len) == SOCKET_ERROR)
+	{
+		zts_close(forwarded_port->ztsocket4);
+		zts_close(forwarded_port->ztsocket6);
+		closesocket(forwarded_port->socket);
+		delete forwarded_port;
+		RETURN_FAILURE("unable to get the assigned port of ZeroTier socket");
+	}
 
-	// Create the thread that forwards packets from ZeroTier IPv4 to the local service.
-	forwarded_port->thread_zt4inbound = new std::thread([forwarded_port, localservice]()
+	// Create the thread that forwards packets from ZeroTier IPv4 and IPv6 to the local service.
+	forwarded_port->thread_ztinbound = new std::thread([forwarded_port, localservice]()
 	{
 		forward_from_zerotier(
 			forwarded_port,
-			&localservice,
-			forwarded_port->ztsocket4
-		);
-	});
-
-	// Create the thread that forwards packets from ZeroTier IPv6 to the local service.
-	forwarded_port->thread_zt6inbound = new std::thread([forwarded_port, localservice]()
-	{
-		forward_from_zerotier(
-			forwarded_port,
-			&localservice,
-			forwarded_port->ztsocket6
+			&localservice
 		);
 	});
 
@@ -511,7 +545,10 @@ int callback_forward_udp(const struct _u_request * request, struct _u_response *
 	ports->insert(std::pair<int, struct forwarded_port*>(service.sin_port, forwarded_port));
 
 	json_t* result = json_object();
+	json_object_set_new(result, "localport", json_integer(localservice.sin_port));
 	json_object_set_new(result, "proxyport", json_integer(service.sin_port));
+	json_object_set_new(result, "zt4port", json_integer(servicezt4->sin_port));
+	json_object_set_new(result, "zt6port", json_integer(servicezt6.sin6_port));
 	ulfius_set_json_body_response(response, 200, result);
 	json_decref(result);
 
@@ -542,15 +579,13 @@ int callback_unforward_udp(const struct _u_request * request, struct _u_response
 	existing_port->second->running = false;
 	
 	// Join the threads until they are actually finished.
-	existing_port->second->thread_zt4inbound->join();
-	existing_port->second->thread_zt6inbound->join();
+	existing_port->second->thread_ztinbound->join();
 	existing_port->second->thread_localinbound->join();
 
 	// Delete the thread and mapped value.
 	auto temp = existing_port->second;
 	ports->erase(existing_port);
-	delete temp->thread_zt4inbound;
-	delete temp->thread_zt6inbound;
+	delete temp->thread_ztinbound;
 	delete temp->thread_localinbound;
 	delete temp;
 
