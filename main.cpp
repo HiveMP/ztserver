@@ -416,7 +416,7 @@ int callback_forward_udp(const struct _u_request * request, struct _u_response *
 	sockaddr_in localservice;
 	localservice.sin_family = AF_INET;
 	localservice.sin_addr.s_addr = inet_addr("127.0.0.1");
-	localservice.sin_port = real_localport;
+	localservice.sin_port = htons(real_localport);
 
 	struct forwarded_port* forwarded_port = new struct forwarded_port();
 
@@ -438,7 +438,7 @@ int callback_forward_udp(const struct _u_request * request, struct _u_response *
 	service.sin_family = AF_INET;
 	service.sin_addr.s_addr = inet_addr("127.0.0.1");
 	if (real_proxyport > 0 && real_proxyport < 65536) {
-		service.sin_port = real_proxyport;
+		service.sin_port = htons(real_proxyport);
 	}
 	if (bind(forwarded_port->socket, (SOCKADDR*)&service, sizeof(service)) == SOCKET_ERROR) {
 		closesocket(forwarded_port->socket);
@@ -451,7 +451,7 @@ int callback_forward_udp(const struct _u_request * request, struct _u_response *
 		delete forwarded_port;
 		RETURN_FAILURE("unable to get the assigned port of listening socket");
 	}
-	forwarded_port->proxyport = service.sin_port;
+	forwarded_port->proxyport = ntohs(service.sin_port);
 
 	// Create the ZeroTier socket.
 	std::cout << "creating zerotier socket..." << std::endl;
@@ -545,10 +545,10 @@ int callback_forward_udp(const struct _u_request * request, struct _u_response *
 	ports->insert(std::pair<int, struct forwarded_port*>(service.sin_port, forwarded_port));
 
 	json_t* result = json_object();
-	json_object_set_new(result, "localport", json_integer(localservice.sin_port));
-	json_object_set_new(result, "proxyport", json_integer(service.sin_port));
-	json_object_set_new(result, "zt4port", json_integer(servicezt4->sin_port));
-	json_object_set_new(result, "zt6port", json_integer(servicezt6.sin6_port));
+	json_object_set_new(result, "localport", json_integer(ntohs(localservice.sin_port)));
+	json_object_set_new(result, "proxyport", json_integer(ntohs(service.sin_port)));
+	json_object_set_new(result, "zt4port", json_integer(ntohs(servicezt4->sin_port)));
+	json_object_set_new(result, "zt6port", json_integer(ntohs(servicezt6.sin6_port)));
 	ulfius_set_json_body_response(response, 200, result);
 	json_decref(result);
 
