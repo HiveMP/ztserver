@@ -41,7 +41,7 @@ endif()
 include_directories(${MICROHTTPD_INCLUDE_DIR})
 link_libraries(${MICROHTTPD_LIBRARY})
 
-set(LIBZT_BUILD_VERSION "49")
+set(LIBZT_BUILD_VERSION "54")
 
 if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
   if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/win32-${LIBZT_BUILD_VERSION}.zip")
@@ -121,6 +121,10 @@ message(STATUS "Defining ztserver...")
 add_definitions(-DU_DISABLE_CURL -DU_DISABLE_WEBSOCKET)
 add_executable(ztserver 
   main.cpp
+  forwardlocal.cpp
+  forwardzt.cpp
+  rest.cpp
+  state.cpp
   ulfius/lib/orcania/src/base64.c
   ulfius/lib/orcania/src/memory.c
   ulfius/lib/orcania/src/orcania.c
