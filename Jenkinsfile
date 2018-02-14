@@ -3,7 +3,7 @@ stage('Build') {
   def parallelMap = [:]
   parallelMap["Windows x64"] = {
     node('windows') {
-      checkout(poll: false, changelog: false, scm: scm)
+      gitCommit = checkout(poll: true, changelog: true, scm: scm).GIT_COMMIT
       bat('git submodule update --init --recursive')
       bat('git clean -xdf build')
       bat('''
