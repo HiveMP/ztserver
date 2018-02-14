@@ -1,5 +1,7 @@
 # ztserver
 
+![Build Status](https://build-oss.redpoint.games/buildStatus/icon?job=HiveMP/ztserver/master)
+
 _A local ZeroTier daemon for forwarding UDP traffic over ZeroTier, controllable via REST API._
 
 ztserver provides user-space networking over ZeroTier to desktop applications, without linking directly against libzt. This means that your applications can communicate over a ZeroTier network:
