@@ -1,0 +1,286 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "The ztserver REST API.",
+    "version": "1.0.0",
+    "title": "ztserver"
+  },
+  "host": "localhost:8080",
+  "tags": [
+    {
+      "name": "network",
+      "description": "Join and leave networks"
+    },
+    {
+      "name": "socket",
+      "description": "Forward and unforward sockets"
+    }
+  ],
+  "schemes": [
+    "http"
+  ],
+  "paths": {
+    "/join": {
+      "put": {
+        "tags": [
+          "network"
+        ],
+        "summary": "Join a ZeroTier network",
+        "description": "",
+        "operationId": "join",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "req",
+            "description": "Network join request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ZeroTierJoinRequest"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "Outcome",
+            "schema": {
+              "$ref": "#/definitions/ZeroTierOutcome"
+            }
+          }
+        }
+      }
+    },
+    "/shutdown": {
+      "put": {
+        "tags": [
+          "network"
+        ],
+        "summary": "Leaves the ZeroTier network",
+        "description": "",
+        "operationId": "leave",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "req",
+            "description": "Network leave request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ZeroTierLeaveRequest"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "Outcome",
+            "schema": {
+              "$ref": "#/definitions/ZeroTierOutcome"
+            }
+          }
+        }
+      }
+    },
+    "/info": {
+      "get": {
+        "tags": [
+          "network"
+        ],
+        "summary": "Information about the current ZeroTier connection",
+        "description": "",
+        "operationId": "getInfo",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "The ZeroTier information",
+            "schema": {
+              "$ref": "#/definitions/ZeroTierInformation"
+            }
+          },
+          "default": {
+            "description": "Outcome",
+            "schema": {
+              "$ref": "#/definitions/ZeroTierOutcome"
+            }
+          }
+        }
+      }
+    },
+    "/forward": {
+      "put": {
+        "tags": [
+          "socket"
+        ],
+        "summary": "Creates a forwarding socket into the ZeroTier network",
+        "description": "",
+        "operationId": "forward",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "req",
+            "description": "Socket forward request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ZeroTierForwardRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The forwarding information",
+            "schema": {
+              "$ref": "#/definitions/ZeroTierForwardedSocket"
+            }
+          },
+          "default": {
+            "description": "Outcome",
+            "schema": {
+              "$ref": "#/definitions/ZeroTierOutcome"
+            }
+          }
+        }
+      }
+    },
+    "/unforward": {
+      "put": {
+        "tags": [
+          "socket"
+        ],
+        "summary": "Removes a forwarding socket from the ZeroTier network",
+        "description": "",
+        "operationId": "unforward",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "req",
+            "description": "Socket unforward request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ZeroTierUnforwardRequest"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "Outcome",
+            "schema": {
+              "$ref": "#/definitions/ZeroTierOutcome"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "ZeroTierJoinRequest": {
+      "type": "object",
+      "properties": {
+        "nwid": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      }
+    },
+    "ZeroTierForwardRequest": {
+      "type": "object",
+      "required": [
+        "localport"
+      ],
+      "properties": {
+        "localport": {
+          "type": "integer"
+        },
+        "proxyport": {
+          "type": "integer"
+        }
+      }
+    },
+    "ZeroTierUnforwardRequest": {
+      "type": "object",
+      "properties": {
+        "proxyport": {
+          "type": "integer"
+        }
+      }
+    },
+    "ZeroTierLeaveRequest": {
+      "type": "object"
+    },
+    "ZeroTierInformation": {
+      "type": "object",
+      "properties": {
+        "nwid": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "nodeid": {
+          "type": "string"
+        },
+        "addresses": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ZeroTierForwardedSocket": {
+      "type": "object",
+      "properties": {
+        "localport": {
+          "type": "integer"
+        },
+        "proxyport": {
+          "type": "integer"
+        },
+        "zt4port": {
+          "type": "integer"
+        },
+        "zt6port": {
+          "type": "integer"
+        }
+      }
+    },
+    "ZeroTierOutcome": {
+      "type": "object",
+      "properties": {
+        "outcome": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
