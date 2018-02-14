@@ -94,7 +94,7 @@ stage('Test') {
     dir('test') {
       bat('''
 set PATH=%PATH:"=%
-call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise\\Common7\\Tools\\VsDevCmd.bat"
+call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\Common7\\Tools\\VsDevCmd.bat"
 msbuild /m TestZt.sln''')
       dir('TestZt/bin/Debug/netcoreapp2.0') {
         bat('dotnet TestZt.dll')
