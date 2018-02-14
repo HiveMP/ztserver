@@ -41,7 +41,7 @@ endif()
 include_directories(${MICROHTTPD_INCLUDE_DIR})
 link_libraries(${MICROHTTPD_LIBRARY})
 
-set(LIBZT_BUILD_VERSION "54")
+set(LIBZT_BUILD_VERSION "55")
 
 if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
   if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/win32-${LIBZT_BUILD_VERSION}.zip")
@@ -70,13 +70,13 @@ endif()
 message(STATUS "Including libzt headers and libraries...")
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/libzt/include)
 if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
-  link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libzt/bin_win32/lib/Debug)
+  link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libzt/bin_win32/lib/${CMAKE_BUILD_TYPE})
 	set (WIN_LIB_HINT_PATH "C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.16299.0\\um\\x86")
 	find_library(ws2_32_LIBRARY_PATH NAMES WS2_32 HINTS ${WIN_LIB_HINT_PATH})
 	find_library(lshlwapi_LIBRARY_PATH NAMES ShLwApi HINTS ${WIN_LIB_HINT_PATH})
 	set (liphlpapi_LIBRARY_PATH "C:/Program Files (x86)/Windows Kits/10/Lib/10.0.16299.0/um/x86/iphlpapi.Lib")
 else()
-  link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libzt/bin_win64/lib/Debug)
+  link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libzt/bin_win64/lib/${CMAKE_BUILD_TYPE})
 	set (WIN_LIB_HINT_PATH "C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.16299.0\\um\\x64")
 	find_library(ws2_32_LIBRARY_PATH NAMES WS2_32 HINTS ${WIN_LIB_HINT_PATH})
 	find_library(lshlwapi_LIBRARY_PATH NAMES ShLwApi HINTS ${WIN_LIB_HINT_PATH})
@@ -94,14 +94,39 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/ulfius/src)
 
 message(STATUS "Finding pthreads...")
 find_path(PTHREAD_INCLUDE_DIR pthread.h)
-find_library(
-  PTHREAD_LIBRARY pthreadsVC2
-  PATHS 
-    ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x86-windows/lib/pthreadsVC2.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x86-windows/lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x86-windows/bin)
+if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
+  find_library(
+    PTHREAD_LIBRARY pthreadsVC2
+    PATHS 
+      ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x86-windows/lib
+      ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x86-windows/bin)
+else()
+  find_library(
+    PTHREAD_LIBRARY pthreadsVC2
+    PATHS 
+      ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x64-windows/lib
+      ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x64-windows/bin)
+endif()
 include_directories(${PTHREAD_INCLUDE_DIR})
 link_libraries(${PTHREAD_LIBRARY})
+
+message(STATUS "Finding jansson...")
+find_path(JANSSON_INCLUDE_DIR jansson.h)
+if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
+  find_library(
+    JANSSON_LIBRARY jansson
+    PATHS 
+      ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x86-windows/lib
+      ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x86-windows/bin)
+else()
+  find_library(
+    JANSSON_LIBRARY jansson
+    PATHS 
+      ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x64-windows/lib
+      ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x64-windows/bin)
+endif()
+include_directories(${JANSSON_INCLUDE_DIR})
+link_libraries(${JANSSON_LIBRARY})
 
 message(STATUS "Patching poll.h include out of ulfius...")
 file(READ ulfius/src/ulfius.h ulfiusheader)
@@ -137,10 +162,6 @@ add_executable(ztserver
   ulfius/src/ulfius.c
   win32-shim/syslog.c
   win32-shim/string.c)
-
-message(STATUS "Including jansson JSON library...")
-find_package(jansson REQUIRED)
-target_link_libraries(ztserver PRIVATE jansson)
 
 message(STATUS "Defining semaphore bug replications...")
 function(define_repl IPV4_ON IPV6_ON IPV4_FD_1 USE_MULTITHREAD NO_FD0_SELECT NO_FD1_SELECT)
@@ -179,7 +200,6 @@ function(define_repl IPV4_ON IPV6_ON IPV4_FD_1 USE_MULTITHREAD NO_FD0_SELECT NO_
     ulfius/src/ulfius.c
     win32-shim/syslog.c
     win32-shim/string.c)
-  target_link_libraries(zt_repl${SUFFIX} PRIVATE jansson)
   if(${USE_MULTITHREAD})
     target_compile_definitions(zt_repl${SUFFIX} PUBLIC -DUSE_THREADS=1)
   endif()
@@ -237,7 +257,6 @@ add_executable(ztbasicrecv
   ulfius/src/ulfius.c
   win32-shim/syslog.c
   win32-shim/string.c)
-target_link_libraries(ztbasicrecv PRIVATE jansson)
 
 add_executable(ztbasicrecvtcp 
   zt_basic_recv_tcp.cpp
@@ -253,4 +272,3 @@ add_executable(ztbasicrecvtcp
   ulfius/src/ulfius.c
   win32-shim/syslog.c
   win32-shim/string.c)
-target_link_libraries(ztbasicrecvtcp PRIVATE jansson)
