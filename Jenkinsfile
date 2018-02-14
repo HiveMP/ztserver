@@ -85,6 +85,23 @@ stage('Archive') {
     parallel (parallelMap)
   }
 }
+stage('Test') {
+  node('windows') {
+    checkout(poll: false, changelog: false, scm: scm)
+    unstash ('win-x64-MinSizeRel')
+    powerShell('Move-Item -Force build\\MinSizeRel\\*.dll test\\TestZt\\')
+    powerShell('Move-Item -Force build\\MinSizeRel\\*.exe test\\TestZt\\')
+    dir('test') {
+      bat('''
+set PATH=%PATH:"=%
+call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise\\Common7\\Tools\\VsDevCmd.bat"
+msbuild /m TestZt.sln''')
+      dir('TestZt/bin/Debug/netcoreapp2.0') {
+        bat('dotnet TestZt.dll')
+      }
+    }
+  }
+}
 milestone label: 'Publish', ordinal: 20
 stage('Publish to GitHub') {
   node('linux') {
