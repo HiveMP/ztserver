@@ -12,10 +12,12 @@ if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
   execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/vcpkg.exe install libmicrohttpd WORKING_DIRECTORY vcpkg)
   execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/vcpkg.exe install jansson WORKING_DIRECTORY vcpkg)
   execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/vcpkg.exe install pthreads WORKING_DIRECTORY vcpkg)
+  execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/vcpkg.exe install cxxopts WORKING_DIRECTORY vcpkg)
 else()
   execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/vcpkg.exe install libmicrohttpd:x64-windows WORKING_DIRECTORY vcpkg)
   execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/vcpkg.exe install jansson:x64-windows WORKING_DIRECTORY vcpkg)
   execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/vcpkg.exe install pthreads:x64-windows WORKING_DIRECTORY vcpkg)
+  execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/vcpkg.exe install cxxopts:x64-windows WORKING_DIRECTORY vcpkg)
 endif()
 
 message(STATUS "Including vcpkg CMake toolchain...")
@@ -31,12 +33,12 @@ if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
       ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x86-windows/lib
       ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x86-windows/bin)
 else()
-find_library(
-  MICROHTTPD_LIBRARY libmicrohttpd 
-  PATHS 
-    ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x64-windows/lib/libmicrohttpd.lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x64-windows/lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x64-windows/bin)
+  find_library(
+    MICROHTTPD_LIBRARY libmicrohttpd 
+    PATHS 
+      ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x64-windows/lib/libmicrohttpd.lib
+      ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x64-windows/lib
+      ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x64-windows/bin)
 endif()
 include_directories(${MICROHTTPD_INCLUDE_DIR})
 link_libraries(${MICROHTTPD_LIBRARY})
@@ -127,6 +129,10 @@ else()
 endif()
 include_directories(${JANSSON_INCLUDE_DIR})
 link_libraries(${JANSSON_LIBRARY})
+
+message(STATUS "Finding cxxopts...")
+find_path(CXXOPTS_INCLUDE_DIR cxxopts.hpp)
+include_directories(${CXXOPTS_INCLUDE_DIR})
 
 message(STATUS "Patching poll.h include out of ulfius...")
 file(READ ulfius/src/ulfius.h ulfiusheader)
