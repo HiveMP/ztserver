@@ -38,8 +38,7 @@ void *get_in_addr_zt(struct sockaddr *sa) {
 
 void forward_packet_zt(
 	struct forwarded_port* forwarded_port,
-	const struct sockaddr_in* localservice,
-	char* buffer,
+	unsigned char* buffer,
 	ssize_t_v count)
 {
 	if (count < 1)
@@ -56,8 +55,8 @@ void forward_packet_zt(
 
 		struct sockaddr_in src_addr4;
 		src_addr4.sin_family = AF_INET;
-		memcpy(buffer + 1, &src_addr4.sin_addr, 4);
-		memcpy(buffer + 5, &src_addr4.sin_port, 2);
+		memcpy(&src_addr4.sin_addr, buffer + 1, 4);
+		memcpy(&src_addr4.sin_port, buffer + 5, 2);
 
 		char* buf2 = (char*)malloc(4096);
 		memset(buf2, 0, 4096);

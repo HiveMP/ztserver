@@ -2,7 +2,11 @@
 
 _A local ZeroTier daemon for forwarding UDP traffic over ZeroTier, controllable via REST API._
 
-ztserver provides user-space networking over ZeroTier to desktop applications, without requiring a commercial embedding license from ZeroTier, Inc. By launching ztserver as it's own process, your application avoids linking against the GPL licensed code of libzt.
+ztserver provides user-space networking over ZeroTier to desktop applications, without linking directly against libzt. This means that:
+
+- You can communicate over a ZeroTier network using the standard system functions like `recvfrom` and `sendto`, without using the `zts_` variants.
+- You can communicate over a ZeroTier network from other languages like Node.js or C# without requiring bindings or ABI compatibility.
+- You can communicate over a ZeroTier network from user-space, without requiring a commercial embedding license from ZeroTier, Inc. By launching ztserver as it's own process, your application avoids linking against the GPL licensed code of libzt.
 
 ztserver is still experimental and is not recommended for production usage.
 

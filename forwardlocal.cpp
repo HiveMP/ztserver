@@ -29,9 +29,8 @@ void forward_packet(
 	{
 		char* sendbuf = (char*)malloc(IPV4_PREFIX_SIZE + count);
 		sendbuf[0] = IPV4_TYPE;
-		struct sockaddr_in* src_addr4 = (struct sockaddr_in*)src_addr;
-		memcpy(sendbuf + 1, &src_addr4->sin_addr, sizeof(IN_ADDR));
-		memcpy(sendbuf + 5, &src_addr4->sin_port, sizeof(USHORT));
+		memcpy(sendbuf + 1, src_addr, sizeof(uint32_t));
+		memcpy(sendbuf + 5, &src_port, sizeof(uint16_t));
 		memcpy(sendbuf + 7, buffer, count);
 		if (sendto(
 			forwarded_port->socket,
@@ -60,9 +59,8 @@ void forward_packet(
 	{
 		char* sendbuf = (char*)malloc(IPV6_PREFIX_SIZE + count);
 		sendbuf[0] = IPV6_TYPE;
-		struct sockaddr_in6* src_addr6 = (struct sockaddr_in6*)src_addr;
-		memcpy(sendbuf + 1, &src_addr6->sin6_addr, sizeof(IN6_ADDR));
-		memcpy(sendbuf + 17, &src_addr6->sin6_port, sizeof(USHORT));
+		memcpy(sendbuf + 1, src_addr, sizeof(uint32_t) * 4);
+		memcpy(sendbuf + 17, &src_port, sizeof(uint16_t));
 		memcpy(sendbuf + 19, buffer, count);
 		if (sendto(
 			forwarded_port->socket,
@@ -122,6 +120,7 @@ void forward_from_local(
 			if (FD_ISSET(forwarded_port->socket, &readset))
 			{
 				char buffer[2048];
+				memset(buffer, 0, 2048);
 				struct sockaddr_storage src_addr;
 				socklen_t src_addr_len = sizeof(src_addr);
 				ssize_t_v count = recvfrom(forwarded_port->socket, buffer, sizeof(buffer), 0, (struct sockaddr*)&src_addr, &src_addr_len);
@@ -138,8 +137,7 @@ void forward_from_local(
 				{
 					forward_packet_zt(
 						forwarded_port,
-						localservice,
-						buffer,
+						(unsigned char*)buffer,
 						count);
 				}
 			}
