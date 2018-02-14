@@ -3,3 +3,9 @@ libzt/
 /win32-*.zip
 /win64-*.zip
 build/
+test/TestZt/bin/
+test/TestZt/obj/
+test/TestZt/ztidentityA/
+test/TestZt/ztidentityB/
+test/TestZt/*.dll
+test/TestZt/*.exe
