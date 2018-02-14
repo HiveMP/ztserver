@@ -68,20 +68,22 @@ cmake --build build --config MinSizeRel''')
   parallel (parallelMap)
 }
 stage('Archive') {
-  def parallelMap = [:]
-  ['x86', 'x64'].each { arch ->
-    ['Debug', 'Release', 'MinSizeRel', 'RelWithDebInfo'].each { config ->
-      parallelMap['win-' + arch + '-' + config] = {
-        ws {
-          sh('rm -Rf build || true')
-          unstash ('win-' + arch + '-' + config)
-          sh('zip -r win-' + arch + '-' + config + '-' + env.BUILD_NUMBER + '.zip build')
-          stash includes: ('win-' + arch + '-' + config + '-' + env.BUILD_NUMBER + '.zip'), name: 'win-' + arch + '-' + config + '-archive'
+  node('linux') {
+    def parallelMap = [:]
+    ['x86', 'x64'].each { arch ->
+      ['Debug', 'Release', 'MinSizeRel', 'RelWithDebInfo'].each { config ->
+        parallelMap['win-' + arch + '-' + config] = {
+          ws {
+            sh('rm -Rf build || true')
+            unstash ('win-' + arch + '-' + config)
+            sh('zip -r win-' + arch + '-' + config + '-' + env.BUILD_NUMBER + '.zip build')
+            stash includes: ('win-' + arch + '-' + config + '-' + env.BUILD_NUMBER + '.zip'), name: 'win-' + arch + '-' + config + '-archive'
+          }
         }
       }
     }
+    parallel (parallelMap)
   }
-  parallel (parallelMap)
 }
 milestone label: 'Publish', ordinal: 20
 stage('Publish to GitHub') {
