@@ -10,11 +10,9 @@ ztserver provides user-space networking over ZeroTier to desktop applications, w
 - From other languages like Node.js or C# without requiring bindings or ABI compatibility.
 - From user-space, without requiring a commercial embedding license from ZeroTier, Inc. By launching ztserver as it's own process, your application avoids linking against the GPL licensed code of libzt.
 
-ztserver is still experimental and is not recommended for production usage.
-
 ## Download
 
-Currently ztserver is only available as source code; we are not yet automatically building and publishing compiled binaries.
+Download the latest release from [the GitHub releases page](https://github.com/HiveMP/ztserver/releases).
 
 ## Launching
 
