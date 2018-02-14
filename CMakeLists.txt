@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.9)
 project(ztserver)
 
+option(ZT_DEBUG "build zt debugging and replication tools" OFF)
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/vcpkg.exe")
 else()
   message(STATUS "Bootstrapping vcpkg...")
@@ -72,13 +74,21 @@ endif()
 message(STATUS "Including libzt headers and libraries...")
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/libzt/include)
 if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
-  link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libzt/bin_win32/lib/${CMAKE_BUILD_TYPE})
+  if (MSVC)
+    link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libzt/bin_win32/lib/$(ConfigurationName))
+  else()
+    link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libzt/bin_win32/lib/${CMAKE_BUILD_TYPE})
+  endif()
 	set (WIN_LIB_HINT_PATH "C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.16299.0\\um\\x86")
 	find_library(ws2_32_LIBRARY_PATH NAMES WS2_32 HINTS ${WIN_LIB_HINT_PATH})
 	find_library(lshlwapi_LIBRARY_PATH NAMES ShLwApi HINTS ${WIN_LIB_HINT_PATH})
 	set (liphlpapi_LIBRARY_PATH "C:/Program Files (x86)/Windows Kits/10/Lib/10.0.16299.0/um/x86/iphlpapi.Lib")
 else()
-  link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libzt/bin_win64/lib/${CMAKE_BUILD_TYPE})
+  if (MSVC)
+    link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libzt/bin_win64/lib/$(ConfigurationName))
+  else()
+    link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libzt/bin_win64/lib/${CMAKE_BUILD_TYPE})
+  endif()
 	set (WIN_LIB_HINT_PATH "C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.16299.0\\um\\x64")
 	find_library(ws2_32_LIBRARY_PATH NAMES WS2_32 HINTS ${WIN_LIB_HINT_PATH})
 	find_library(lshlwapi_LIBRARY_PATH NAMES ShLwApi HINTS ${WIN_LIB_HINT_PATH})
@@ -169,31 +179,89 @@ add_executable(ztserver
   win32-shim/syslog.c
   win32-shim/string.c)
 
-message(STATUS "Defining semaphore bug replications...")
-function(define_repl IPV4_ON IPV6_ON IPV4_FD_1 USE_MULTITHREAD NO_FD0_SELECT NO_FD1_SELECT)
-  set(SUFFIX "")
-  if(${USE_MULTITHREAD})
-    set(SUFFIX "${SUFFIX}_mt")
-  else()
-    set(SUFFIX "${SUFFIX}_st")
-  endif()
-  if(${IPV4_ON})
-    set(SUFFIX "${SUFFIX}_ipv4")
-  endif()
-  if(${IPV6_ON})
-    set(SUFFIX "${SUFFIX}_ipv6")
-  endif()
-  if(${IPV4_FD_1})
-    set(SUFFIX "${SUFFIX}_v4fd1")
-  endif()
-  if(${NO_FD0_SELECT})
-    set(SUFFIX "${SUFFIX}_nfd0s")
-  endif()
-  if(${NO_FD1_SELECT})
-    set(SUFFIX "${SUFFIX}_nfd1s")
-  endif()
-  add_executable(zt_repl${SUFFIX}
-    zt_repl.cpp
+if (${ZT_DEBUG})
+  message(STATUS "Defining semaphore bug replications...")
+  function(define_repl IPV4_ON IPV6_ON IPV4_FD_1 USE_MULTITHREAD NO_FD0_SELECT NO_FD1_SELECT)
+    set(SUFFIX "")
+    if(${USE_MULTITHREAD})
+      set(SUFFIX "${SUFFIX}_mt")
+    else()
+      set(SUFFIX "${SUFFIX}_st")
+    endif()
+    if(${IPV4_ON})
+      set(SUFFIX "${SUFFIX}_ipv4")
+    endif()
+    if(${IPV6_ON})
+      set(SUFFIX "${SUFFIX}_ipv6")
+    endif()
+    if(${IPV4_FD_1})
+      set(SUFFIX "${SUFFIX}_v4fd1")
+    endif()
+    if(${NO_FD0_SELECT})
+      set(SUFFIX "${SUFFIX}_nfd0s")
+    endif()
+    if(${NO_FD1_SELECT})
+      set(SUFFIX "${SUFFIX}_nfd1s")
+    endif()
+    add_executable(zt_repl${SUFFIX}
+      zt_repl.cpp
+      ulfius/lib/orcania/src/base64.c
+      ulfius/lib/orcania/src/memory.c
+      ulfius/lib/orcania/src/orcania.c
+      ulfius/lib/yder/src/yder.c
+      ulfius/src/u_map.c
+      ulfius/src/u_request.c
+      ulfius/src/u_response.c
+      ulfius/src/u_send_request.c
+      ulfius/src/u_websocket.c
+      ulfius/src/ulfius.c
+      win32-shim/syslog.c
+      win32-shim/string.c)
+    if(${USE_MULTITHREAD})
+      target_compile_definitions(zt_repl${SUFFIX} PUBLIC -DUSE_THREADS=1)
+    endif()
+    if(${IPV4_ON})
+      target_compile_definitions(zt_repl${SUFFIX} PUBLIC -DUSE_IPV4=1)
+    endif()
+    if(${IPV6_ON})
+      target_compile_definitions(zt_repl${SUFFIX} PUBLIC -DUSE_IPV6=1)
+    endif()
+    if(${IPV4_FD_1})
+      target_compile_definitions(zt_repl${SUFFIX} PUBLIC -DIPV4_AS_SECOND_SOCKET=1)
+    endif()
+    if(${NO_FD0_SELECT})
+      target_compile_definitions(zt_repl${SUFFIX} PUBLIC -DNO_FD0_SELECT=1)
+    endif()
+    if(${NO_FD1_SELECT})
+      target_compile_definitions(zt_repl${SUFFIX} PUBLIC -DNO_FD1_SELECT=1)
+    endif()
+  endfunction()
+  foreach(IPV4_ON ON OFF)
+    foreach(IPV6_ON ON OFF)
+      foreach(USE_MULTITHREAD ON OFF)
+        if(IPV4_ON AND IPV6_ON)
+          foreach(IPV4_FD_1 ON OFF)
+            foreach(NO_FD0_SELECT ON OFF)
+              foreach(NO_FD1_SELECT ON OFF)
+                if(${IPV4_ON} OR ${IPV6_ON})
+                  define_repl(${IPV4_ON} ${IPV6_ON} ${IPV4_FD_1} ${USE_MULTITHREAD} ${NO_FD0_SELECT} ${NO_FD1_SELECT})
+                endif()
+              endforeach()
+            endforeach()
+          endforeach()
+        else()
+          if(${IPV4_ON} OR ${IPV6_ON})
+            foreach(NO_FD0_SELECT ON OFF)
+              define_repl(${IPV4_ON} ${IPV6_ON} OFF ${USE_MULTITHREAD} ${NO_FD0_SELECT} OFF)
+            endforeach()
+          endif()
+        endif()
+      endforeach()
+    endforeach()
+  endforeach()
+
+  add_executable(ztbasicrecv 
+    zt_basic_recv.cpp
     ulfius/lib/orcania/src/base64.c
     ulfius/lib/orcania/src/memory.c
     ulfius/lib/orcania/src/orcania.c
@@ -206,75 +274,19 @@ function(define_repl IPV4_ON IPV6_ON IPV4_FD_1 USE_MULTITHREAD NO_FD0_SELECT NO_
     ulfius/src/ulfius.c
     win32-shim/syslog.c
     win32-shim/string.c)
-  if(${USE_MULTITHREAD})
-    target_compile_definitions(zt_repl${SUFFIX} PUBLIC -DUSE_THREADS=1)
-  endif()
-  if(${IPV4_ON})
-    target_compile_definitions(zt_repl${SUFFIX} PUBLIC -DUSE_IPV4=1)
-  endif()
-  if(${IPV6_ON})
-    target_compile_definitions(zt_repl${SUFFIX} PUBLIC -DUSE_IPV6=1)
-  endif()
-  if(${IPV4_FD_1})
-    target_compile_definitions(zt_repl${SUFFIX} PUBLIC -DIPV4_AS_SECOND_SOCKET=1)
-  endif()
-  if(${NO_FD0_SELECT})
-    target_compile_definitions(zt_repl${SUFFIX} PUBLIC -DNO_FD0_SELECT=1)
-  endif()
-  if(${NO_FD1_SELECT})
-    target_compile_definitions(zt_repl${SUFFIX} PUBLIC -DNO_FD1_SELECT=1)
-  endif()
-endfunction()
-foreach(IPV4_ON ON OFF)
-  foreach(IPV6_ON ON OFF)
-    foreach(USE_MULTITHREAD ON OFF)
-      if(IPV4_ON AND IPV6_ON)
-        foreach(IPV4_FD_1 ON OFF)
-          foreach(NO_FD0_SELECT ON OFF)
-            foreach(NO_FD1_SELECT ON OFF)
-              if(${IPV4_ON} OR ${IPV6_ON})
-                define_repl(${IPV4_ON} ${IPV6_ON} ${IPV4_FD_1} ${USE_MULTITHREAD} ${NO_FD0_SELECT} ${NO_FD1_SELECT})
-              endif()
-            endforeach()
-          endforeach()
-        endforeach()
-      else()
-        if(${IPV4_ON} OR ${IPV6_ON})
-          foreach(NO_FD0_SELECT ON OFF)
-            define_repl(${IPV4_ON} ${IPV6_ON} OFF ${USE_MULTITHREAD} ${NO_FD0_SELECT} OFF)
-          endforeach()
-        endif()
-      endif()
-    endforeach()
-  endforeach()
-endforeach()
 
-add_executable(ztbasicrecv 
-  zt_basic_recv.cpp
-  ulfius/lib/orcania/src/base64.c
-  ulfius/lib/orcania/src/memory.c
-  ulfius/lib/orcania/src/orcania.c
-  ulfius/lib/yder/src/yder.c
-  ulfius/src/u_map.c
-  ulfius/src/u_request.c
-  ulfius/src/u_response.c
-  ulfius/src/u_send_request.c
-  ulfius/src/u_websocket.c
-  ulfius/src/ulfius.c
-  win32-shim/syslog.c
-  win32-shim/string.c)
-
-add_executable(ztbasicrecvtcp 
-  zt_basic_recv_tcp.cpp
-  ulfius/lib/orcania/src/base64.c
-  ulfius/lib/orcania/src/memory.c
-  ulfius/lib/orcania/src/orcania.c
-  ulfius/lib/yder/src/yder.c
-  ulfius/src/u_map.c
-  ulfius/src/u_request.c
-  ulfius/src/u_response.c
-  ulfius/src/u_send_request.c
-  ulfius/src/u_websocket.c
-  ulfius/src/ulfius.c
-  win32-shim/syslog.c
-  win32-shim/string.c)
+  add_executable(ztbasicrecvtcp 
+    zt_basic_recv_tcp.cpp
+    ulfius/lib/orcania/src/base64.c
+    ulfius/lib/orcania/src/memory.c
+    ulfius/lib/orcania/src/orcania.c
+    ulfius/lib/yder/src/yder.c
+    ulfius/src/u_map.c
+    ulfius/src/u_request.c
+    ulfius/src/u_response.c
+    ulfius/src/u_send_request.c
+    ulfius/src/u_websocket.c
+    ulfius/src/ulfius.c
+    win32-shim/syslog.c
+    win32-shim/string.c)
+endif()

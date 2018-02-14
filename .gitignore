@@ -2,3 +2,4 @@
 libzt/
 /win32-*.zip
 /win64-*.zip
+build/
