@@ -56,29 +56,52 @@ Connects to the ZeroTier network based on `nwid`. Call this once after launching
 
 ### PUT /forward
 
-Not yet implemented.
+Creates a local port which bi-directionally forwards traffic into the ZeroTier network.
 
-Will be used to bi-directionally forward UDP packets from the local machine to a ZeroTier address.
+This accepts a local UDP port number and optionally a proxy UDP port number. With a proxy port, you can send UDP IPv4 and IPv6 traffic to any destination in the ZeroTier network.
 
-Effectively this will accept:
-- A ZeroTier peer ID (or IP address) and a target port, and
-- A local UDP port to forward incoming packets to
+The local UDP port number is where incoming traffic is forwarded to - that is, when messages arrive at the ZeroTier interface of ztserver in the network, ztserver will prepend the sender information to the message and forward it to the local port for your application to receive.
 
-It will expose that remote client's port as a dynamic UDP port on the local machine. Sending packets to that port will be forwarded to the remote client. Packets received from the remote client will appear to originate from that dynamic UDP port and be sent to the local UDP port.
+The proxy UDP port number is where you send outgoing traffic from your application. You prepend the real destination to the buffer before you send the UDP packet, then you send it to this port number on localhost. If you don't provide `proxyport` in the request, ztserver will find a free UDP port on localhost and use that.
 
-This method will return the dynamic UDP port so you can track the mapping of "remote client -> dynamic UDP port" in your application to resolve incoming packets back to their real identity.
+See "Messaging Format" below for details on how sender and receiver information is encapsulated in messages.
 
-**Request:** TBD
+**Request:** 
 
-**Response:** Standard format (see above)
+```json
+{
+  "localport": 57571
+}
+```
+
+or
+
+```json
+{
+  "localport": 57571,
+  "proxyport": 12000
+}
+```
+
+**Response:** Either the standard error format (with `outcome` set to `false`), or the following structure:
+
+```json
+{
+  "proxyport": 12345
+}
+```
 
 ### PUT /unforward
 
-Not yet implemented.
+Removes a local port that is currently forwarding bi-directional traffic into ZeroTier; a port that was previously set up with `/forward`.
 
-Will accept just a dynamic UDP port that was allocated from a previous forwarding and removes the forwarding.
+**Request:** 
 
-**Request:** TBD
+```json
+{
+  "proxyport": 12345
+}
+```
 
 **Response:** Standard format (see above)
 
@@ -117,6 +140,24 @@ Returns information about the current ZeroTier connection.
   ]
 }
 ```
+
+## Messaging Format
+
+In order to send and receive messages to multiple hosts within ZeroTier from a single local UDP port, the real sender and receiver information has to be encapsulated as a header on the UDP data that's being sent.
+
+For inbound messages being sent to the local port (received from the ZeroTier network) and for outbound messages being sent to the proxy port (sent to the ZeroTier network), they have the following format:
+
+```
+1 byte            - Address Type (0x00 for IPv4, 0x01 for IPv6)
+4 bytes for IPv4, 
+16 bytes for IPv6 - Address in ZT network
+2 bytes           - UDP port in ZT network (unsigned short)
+...               - Actual data to send
+```
+
+The header length varies depending on whether you're sending data to an IPv4 or IPv6 address. Immediately following the "UDP port in ZT network" is the actual data to be sent or actual data received over UDP.
+
+Therefore when receiving a message on your local UDP port, you should read the first byte to determine the header length, then separate the header data from the actual message data. When sending a message to the proxy UDP port, you need to build the header based on where you want to send the data in the ZeroTier network, then prefix the header onto the data before sending it to the proxy UDP port.
 
 ## License
 
