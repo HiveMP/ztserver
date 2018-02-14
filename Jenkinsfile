@@ -39,7 +39,7 @@ cmake --build build --config MinSizeRel''')
       bat('''
 set PATH=%PATH:"=%
 call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars32.bat"
-cmake -H. -Bbuild -G "Visual Studio 15 2017 Win64"
+cmake -H. -Bbuild -G "Visual Studio 15 2017"
 ''')
       bat('''
 set PATH=%PATH:"=%
