@@ -5,6 +5,7 @@ stage('Build') {
     node('windows') {
       checkout(poll: false, changelog: false, scm: scm)
       bat('git submodule update --init --recursive')
+      bat('git clean -xdf build')
       bat('''
 set PATH=%PATH:"=%
 call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat"
@@ -26,16 +27,17 @@ cmake --build build --config RelWithDebInfo''')
 set PATH=%PATH:"=%
 call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat"
 cmake --build build --config MinSizeRel''')
-      stash includes: 'build/Debug', name: 'win-x64-Debug'
-      stash includes: 'build/Release', name: 'win-x64-Release'
-      stash includes: 'build/RelWithDebInfo', name: 'win-x64-RelWithDebInfo'
-      stash includes: 'build/MinSizeRel', name: 'win-x64-MinSizeRel'
+      stash includes: 'build/Debug/**', name: 'win-x64-Debug'
+      stash includes: 'build/Release/**', name: 'win-x64-Release'
+      stash includes: 'build/RelWithDebInfo/**', name: 'win-x64-RelWithDebInfo'
+      stash includes: 'build/MinSizeRel/**', name: 'win-x64-MinSizeRel'
     }
   }
   parallelMap["Windows x86"] = {
     node('windows') {
       checkout(poll: false, changelog: false, scm: scm)
       bat('git submodule update --init --recursive')
+      bat('git clean -xdf build')
       bat('''
 set PATH=%PATH:"=%
 call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars32.bat"
@@ -57,10 +59,10 @@ cmake --build build --config RelWithDebInfo''')
 set PATH=%PATH:"=%
 call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars32.bat"
 cmake --build build --config MinSizeRel''')
-      stash includes: 'build/Debug', name: 'win-x86-Debug'
-      stash includes: 'build/Release', name: 'win-x86-Release'
-      stash includes: 'build/RelWithDebInfo', name: 'win-x86-RelWithDebInfo'
-      stash includes: 'build/MinSizeRel', name: 'win-x86-MinSizeRel'
+      stash includes: 'build/Debug/**', name: 'win-x86-Debug'
+      stash includes: 'build/Release/**', name: 'win-x86-Release'
+      stash includes: 'build/RelWithDebInfo/**', name: 'win-x86-RelWithDebInfo'
+      stash includes: 'build/MinSizeRel/**', name: 'win-x86-MinSizeRel'
     }
   }
   parallel (parallelMap)
