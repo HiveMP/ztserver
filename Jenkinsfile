@@ -93,7 +93,7 @@ stage('Publish to GitHub') {
             parallelMap['win-' + arch + '-' + config] = {
               ws {
                 unstash 'win-' + arch + '-' + config + '-archive'
-                sh('\$GITHUB_RELEASE upload --user HiveMP --repo ztserver --tag 0.' + env.BUILD_NUMBER + ' -n win-' + arch + '-' + config + '-' + env.BUILD_NUMBER + '.zip -f win-' + arch + '-' + config + '-' + env.BUILD_NUMBER + '.zip -l "ztserver for Windows (' + arch ', ' + config + ')"')
+                sh('\$GITHUB_RELEASE upload --user HiveMP --repo ztserver --tag 0.' + env.BUILD_NUMBER + ' -n win-' + arch + '-' + config + '-' + env.BUILD_NUMBER + '.zip -f win-' + arch + '-' + config + '-' + env.BUILD_NUMBER + '.zip -l "ztserver for Windows (' + arch + ', ' + config + ')"')
               }
             }
           }
