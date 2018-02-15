@@ -1,4 +1,8 @@
+#ifdef _WIN32
 #include <cxxopts.hpp>
+#else
+#include "./cxxopts.hpp"
+#endif
 #include <libzt.h>
 #define _SSIZE_T_DEFINED
 extern "C" {
